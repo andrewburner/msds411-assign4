@@ -95,11 +95,11 @@ dend <- as.dendrogram(hcluster)
 
 d3 <- color_branches(dend, k=3)
 plot(d3) +
-  title("Dendrogram: K=3")
+  title("K=3")
 
 d6 <- color_branches(dend, k=6)
 plot(d6) +
-  title("Dendrogram: K=6")
+  title("K=6")
 
 
 # PCA Heirarchical Clustering
