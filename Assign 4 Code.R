@@ -8,7 +8,7 @@ basic_eda <- function(data)
 {
   glimpse(data)
   print(status(data))
-  freq(data) 
+  freq(data)
   print(profiling_num(data))
   plot_num(data)
   describe(data)
@@ -37,7 +37,7 @@ ggplot(emp, aes(x = FIN, y = SER, color = Group)) +
   geom_text(aes(label = Country), hjust = 0, vjust = 0)
 
 emp_pca <- emp %>%
-  select(-Country, -Group) %>% 
+  select(-Country, -Group) %>%
   princomp(cor = FALSE)
 
 str(emp_pca)
@@ -72,6 +72,14 @@ ggplot(emp_v3, aes(x = PC1, y = PC2, color = Group)) +
   geom_point() +
   scale_fill_viridis(discrete = TRUE) +
   geom_text(aes(label = Country), hjust = 0, vjust = 0)
+
+
+
+
+
+
+
+
 
 
 
