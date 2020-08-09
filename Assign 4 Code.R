@@ -2,6 +2,9 @@ library(tidyverse)
 library(GGally)
 library(viridis)
 library(recipes)
+library(maptree)
+library(ggdendro)
+library(dendextend)
 emp <- read_csv('EuropeanEmployment.csv')
 
 basic_eda <- function(data)
@@ -73,13 +76,40 @@ ggplot(emp_v3, aes(x = PC1, y = PC2, color = Group)) +
   scale_fill_viridis(discrete = TRUE) +
   geom_text(aes(label = Country), hjust = 0, vjust = 0)
 
+# 4
+
+# Heirarchical Clustering
+hcluster <- emp %>%
+  select(-Country, -Group) %>%
+  dist() %>%
+  hclust(method = 'complete')
+
+plot(hcluster,labels=emp$Country)
 
 
+ggdendrogram(hcluster) +
+  ggtitle("European Employment Dendrogram") +
+  label(emp$Country)
+
+dend <- as.dendrogram(hcluster)
+
+d3 <- color_branches(dend, k=3)
+plot(d3) +
+  title("Dendrogram: K=3")
+
+d6 <- color_branches(dend, k=6)
+plot(d6) +
+  title("Dendrogram: K=6")
 
 
+# PCA Heirarchical Clustering
 
+hcluster_pca <- emp_v3 %>%
+  select(PC1, PC2) %>%
+  dist() %>%
+  hclust(method = 'complete')
 
-
+plot(hcluster_pca, labels=emp$Country)
 
 
 
