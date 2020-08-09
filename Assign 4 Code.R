@@ -5,6 +5,9 @@ library(recipes)
 library(maptree)
 library(ggdendro)
 library(dendextend)
+library(fpc)
+library(cluster)
+
 emp <- read_csv('EuropeanEmployment.csv')
 
 basic_eda <- function(data)
@@ -84,35 +87,93 @@ hcluster <- emp %>%
   dist() %>%
   hclust(method = 'complete')
 
-plot(hcluster,labels=emp$Country)
+hcluster$labels <- emp$Country
 
+ggdendrogram(hcluster, labels = TRUE) +
+  ggtitle("European Employment Dendrogram")
 
-ggdendrogram(hcluster) +
-  ggtitle("European Employment Dendrogram") +
-  label(emp$Country)
+subdat.3 <- emp %>%
+  select(-Country, -Group)
+TSS.3 <- (nrow(subdat.3)-1)*sum(apply(subdat.3,2,var))
+TSS.3
 
-dend <- as.dendrogram(hcluster)
+complete3 <- cutree(hcluster, k = 3)
+WSS.3 <- cluster.stats(emp %>%
+                         select(-Country, -Group) %>%
+                         dist(),
+                       complete3, alt.clustering=NULL)$within.cluster.ss
+WSS.3
+BetSSPer.3 <- (TSS.3-WSS.3)/TSS.3
+BetSSPer.3
 
-d3 <- color_branches(dend, k=3)
-plot(d3) +
-  title("K=3")
+subdat.6 <- emp %>%
+  select(-Country, -Group)
+TSS.6 <- (nrow(subdat.6)-1)*sum(apply(subdat.6,2,var))
+TSS.6
 
-d6 <- color_branches(dend, k=6)
-plot(d6) +
-  title("K=6")
+complete6 <- cutree(hcluster, k = 6)
+WSS.6 <- cluster.stats(emp %>%
+                         select(-Country, -Group) %>%
+                         dist(),
+                       complete6, alt.clustering=NULL)$within.cluster.ss
+WSS.6
+BetSSPer.6 <- (TSS.6-WSS.6)/TSS.6
+BetSSPer.6
 
 
 # PCA Heirarchical Clustering
+subdat.3_pca <- emp_v3 %>%
+  select(PC1, PC2)
+TSS.3_pca <- (nrow(subdat.3_pca)-1)*sum(apply(subdat.3_pca,2,var))
+TSS.3_pca
 
-hcluster_pca <- emp_v3 %>%
-  select(PC1, PC2) %>%
-  dist() %>%
-  hclust(method = 'complete')
+complete3_pca <- cutree(hcluster, k = 3)
+WSS.3_pca <- cluster.stats(emp_v3 %>%
+                             select(PC1, PC2) %>%
+                             dist(),
+                           complete3_pca, alt.clustering=NULL)$within.cluster.ss
+WSS.3_pca
+BetSSPer.3_pca <- (TSS.3_pca-WSS.3_pca)/TSS.3_pca
+BetSSPer.3_pca
 
-plot(hcluster_pca, labels=emp$Country)
 
 
+subdat.6_pca <- emp_v3 %>%
+  select(PC1, PC2)
+TSS.6_pca <- (nrow(subdat.6_pca)-1)*sum(apply(subdat.6_pca,2,var))
+TSS.6_pca
 
+complete6_pca <- cutree(hcluster, k = 6)
+WSS.6_pca <- cluster.stats(emp_v3 %>%
+                         select(PC1, PC2) %>%
+                         dist(),
+                       complete6_pca, alt.clustering=NULL)$within.cluster.ss
+WSS.6_pca
+BetSSPer.6_pca <- (TSS.6_pca-WSS.6_pca)/TSS.6_pca
+BetSSPer.6_pca
+
+# 5
+# K Means Clustering
+k3_results <- kmeans(subdat.3, 3)
+k3pca_results <- kmeans(subdat.3_pca, 3)
+
+subdat.3 <- subdat.3 %>% mutate(k3 = k3_results$cluster,
+                                k3_pca = k3pca_results$cluster)
+
+
+k6_results <- kmeans(subdat.6, 6)
+k6pca_results <- kmeans(subdat.6_pca, 6)
+
+subdat.6 <- subdat.6 %>% mutate(k6 = k6_results$cluster,
+                                k6_pca = k6pca_results$cluster)
+
+
+BetSSPerk3 <- k3_results$betweenss/k3_results$totss
+BetSSPerk3
+BetSSPerk6 <- k6_results$betweenss/k6_results$totss
+BetSSPerk6
+
+clusplot(subdat.3, k3_results$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
 
 
 
