@@ -33,3 +33,6 @@ ggplot(emp, aes(x = FIN, y = SER, color = Group)) +
   geom_point() +
   scale_fill_viridis(discrete = TRUE) +
   geom_text(aes(label = Country), hjust = 0, vjust = 0)
+
+
+
