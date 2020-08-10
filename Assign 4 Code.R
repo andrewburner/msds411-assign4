@@ -7,6 +7,7 @@ library(ggdendro)
 library(dendextend)
 library(fpc)
 library(cluster)
+library(factoextra)
 
 emp <- read_csv('EuropeanEmployment.csv')
 
@@ -174,7 +175,174 @@ BetSSPerk6 <- k6_results$betweenss/k6_results$totss
 BetSSPerk6
 
 clusplot(subdat.3, k3_results$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+clusplot(subdat.6, k6_results$cluster, color=TRUE, shade=TRUE, labels=2, lines=0)
+
+subdat.3 <- subdat.3 %>% as.data.frame(row.names = emp$Country)
+fviz_cluster(k3_results, data=subdat.3, geom=c("point", "text"),
+             show.clust.cent = TRUE, label = "name")
+
+subdat.6 <- subdat.6 %>% as.data.frame(row.names = emp$Country)
+fviz_cluster(k6_results, data=subdat.6, geom=c("point", "text"),
+             show.clust.cent = TRUE, label = "name")
+
+
+fviz_cluster(k3pca_results, data=subdat.3, geom=c("point", "text"),
+             show.clust.cent = TRUE, label = "name")
+fviz_cluster(k6pca_results, data=subdat.6, geom=c("point", "text"),
+             show.clust.cent = TRUE, label = "name")
+
+BetSSPerk3pca <- k3pca_results$betweenss/k3pca_results$totss
+BetSSPerk3pca
+BetSSPerk6pca <- k6pca_results$betweenss/k6pca_results$totss
+BetSSPerk6pca
+
+
+wssplot <- function(subdat, nc=20, seed=1234) {
+  wss <- (nrow(subdat)-1)*sum(apply(subdat,2,var))
+  for (i in 2:nc) {
+    set.seed(seed)
+    wss[i] <- sum(kmeans(subdat, centers=i)$withinss)
+    }
+  rs <- (wss[1] - wss)/wss[1]
+  plot(1:nc, wss, type="b", xlab="Number of Clusters",
+       ylab="Within groups sum of squares")
+  plot(1:nc, rs, type="b", xlab="Number of Clusters",
+       ylab="% of Between SS")
+  }
+wssplot(select(emp, -Country, -Group))
+
+
+# US States
+states <- readxl::read_xlsx('USStates.xlsx')
+
+summary(states)
+str(states)
+
+ggpairs(states, columns=3:14, aes(color = Region))
+
+states <- states %>% mutate(logPop = log(Population))
+
+
+ggplot(states) +
+  geom_point(aes(x = HouseholdIncome, y = Insured, color = Region))
+
+
+pca_recipe <- recipe(~., data = states)
+
+pca_trans <- pca_recipe %>%
+  step_center(all_numeric()) %>%
+  step_scale(all_numeric()) %>%
+  step_pca(all_numeric())
+
+pca_estimates <- prep(pca_trans)
+states_pca <- juice(pca_estimates)
+
+stand_recipe <- recipe(~., data = states)
+
+stand_trans <- stand_recipe %>%
+  step_center(all_numeric()) %>%
+  step_scale(all_numeric())
+
+stand_vars <- prep(stand_trans)
+states_stand <- juice(stand_vars)
+
+
+ggplot(states_pca, aes(x = PC1, y = PC2, color = Region)) +
+  geom_point() +
+  scale_fill_viridis(discrete = TRUE) +
+  geom_text(aes(label = State), hjust = 0, vjust = 0)
+
+# Heirarchical Clustering
+state_hcluster <- states %>%
+  select(-State, -Region) %>%
+  dist() %>%
+  hclust(method = 'complete')
+
+state_hcluster$labels <- states$State
+
+ggdendrogram(state_hcluster, labels = TRUE) +
+  ggtitle("State Dendrogram")
+
+TSS <- (nrow(states)-1)*sum(apply(states[,3:ncol(states)],2,var))
+state3 <- cutree(state_hcluster, k = 8)
+WSS <- cluster.stats(states %>%
+                         select(-State, -Region) %>%
+                         dist(),
+                     state3, alt.clustering=NULL)$within.cluster.ss
+BetSSPer <- (TSS-WSS)/TSS
+BetSSPer
+
+wssplot <- function(subdat, nc=20, seed=1234) {
+  wss <- (nrow(subdat)-1)*sum(apply(subdat,2,var))
+  for (i in 2:nc) {
+    set.seed(seed)
+    wss[i] <- cluster.stats(subdat %>%
+                            dist(),
+                            cutree(stand_hcluster, k = i),
+                            alt.clustering=NULL)$within.cluster.ss
+  }
+  rs <- (wss[1] - wss)/wss[1]
+  plot(1:nc, wss, type="b", xlab="Number of Cuts",
+       ylab="Within groups sum of squares")
+  plot(1:nc, rs, type="b", xlab="Number of Cuts",
+       ylab="% of Between SS")
+}
+wssplot(select(states, -State, -Region, -logPop))
 
 
 
+plot(color_branches(as.dendrogram(state_hcluster), k = 8))
 
+
+
+# Standardized variables for heirachrical clustering
+stand_hcluster <- states_stand %>%
+  select(-State, -Region) %>%
+  dist() %>%
+  hclust(method = 'complete')
+
+stand_hcluster$labels <- states_stand$State
+
+wssplot(select(states_stand, -State, -Region, -logPop))
+states <- states %>% mutate(cluster = cutree(stand_hcluster, k = 8))
+
+
+#RECIDIVISM
+recid <- readxl::read_xlsx('recidivism.xlsx')
+str(recid)
+summary(recid)
+ggpairs(recid)
+
+wssplot <- function(subdat, nc=20, seed=1234) {
+  wss <- (nrow(subdat)-1)*sum(apply(subdat,2,var))
+  for (i in 2:nc) {
+    set.seed(seed)
+    wss[i] <- sum(kmeans(subdat, centers=i)$withinss)
+  }
+  rs <- (wss[1] - wss)/wss[1]
+  plot(1:nc, wss, type="b", xlab="Number of Clusters",
+       ylab="Within groups sum of squares")
+  plot(1:nc, rs, type="b", xlab="Number of Clusters",
+       ylab="% of Between SS")
+}
+wssplot(recid)
+
+
+k4_results <- kmeans(recid, 4)
+
+pca_recipe <- recipe(~., data = recid)
+
+pca_trans <- pca_recipe %>%
+  step_center(age, tserved, follow, durat) %>%
+  step_scale(age, tserved, follow, durat) %>%
+  step_pca(all_numeric())
+
+pca_estimates <- prep(pca_trans)
+recid_pca <- juice(pca_estimates)
+
+wssplot(recid_pca)
+
+recid_pca <- recid_pca %>% mutate(cluster = k4_results$cluster)
+
+ggplot(recid_pca) +
+  geom_point(aes(PC1, PC2, color = as.factor(cluster)))
